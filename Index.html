@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mars Jarvis</title>
+<style>
+:root{--bg:#070b14;--glass:rgba(120,200,255,.07);--line:rgba(120,200,255,.25);--cy:#5fd8ff;--tx:#dff4ff;--dim:#7f9bb0}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 20%,#10213a,var(--bg) 70%);color:var(--tx);font-family:"Segoe UI",Tahoma,Arial,sans-serif;display:flex;flex-direction:column;align-items:center;padding:24px 16px}
+.card{width:100%;max-width:440px;background:var(--glass);border:1px solid var(--line);border-radius:18px;padding:18px;margin-top:16px}
+h1{margin:8px 0 0;font-size:22px;color:var(--cy)}
+.orb{width:120px;height:120px;border-radius:50%;margin:24px auto 8px;border:2px solid var(--line);background:radial-gradient(circle,rgba(95,216,255,.25),transparent 70%);transition:.3s}
+.orb.on{border-color:var(--cy);box-shadow:0 0 30px var(--cy)}
+.orb.hit{background:radial-gradient(circle,var(--cy),transparent 70%)}
+#st{text-align:center;color:var(--dim);min-height:24px}
+button{width:100%;padding:14px;border-radius:12px;border:1px solid var(--cy);background:rgba(95,216,255,.12);color:var(--cy);font-size:17px;cursor:pointer}
+#log{max-height:220px;overflow-y:auto;font-size:15px;line-height:1.7}
+#log div{border-bottom:1px solid var(--line);padding:4px 0}
+.me{color:var(--tx)}.ai{color:var(--cy)}
+</style>
+</head>
+<body>
+<h1>Mars Jarvis</h1>
+<div class="orb" id="orb"></div>
+<div id="st">اضغط ابدأ ثم قل: جارفيس</div>
+<div class="card"><button id="btn">ابدأ الاستماع</button><button id="tst" style="margin-top:10px">اختبار الصوت فقط</button></div>
+<div class="card"><div id="log"><div class="ai">هنا يظهر ما سمعه جارفيس.</div></div></div>
+
+<script>
+const orb=document.getElementById('orb'),st=document.getElementById('st'),btn=document.getElementById('btn'),log=document.getElementById('log');
+const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+const WAKE=['jarvis','جارفيس','جارفس','جارفز','جاريفس'];
+let rec,on=false,speaking=false;
+
+function add(cls,t){const d=document.createElement('div');d.className=cls;d.textContent=t;log.appendChild(d);log.scrollTop=log.scrollHeight}
+
+// الفم
+function speak(t){
+  speaking=true;
+  const u=new SpeechSynthesisUtterance(t);u.lang='ar-SA';
+  u.onend=u.onerror=()=>{speaking=false};
+  speechSynthesis.cancel();speechSynthesis.speak(u);
+}
+
+// قلب النظام
+function handleCommand(cmd){
+  add('ai','جارفيس: سمعتك'+(cmd?' — قلت: '+cmd:''));
+  speak('سمعتك'+(cmd?'، قلت '+cmd:''));
+}
+
+// الأذن
+function start(){
+  if(!SR){st.textContent='متصفحك لا يدعم الصوت. استخدم Chrome.';return}
+  rec=new SR();rec.continuous=true;rec.interimResults=false;rec.lang='ar-SA';
+  rec.onresult=e=>{
+    if(speaking)return;
+    const text=e.results[e.results.length-1][0].transcript.trim();
+    add('me','سمعت: '+text);
+    const low=text.toLowerCase();
+    const w=WAKE.find(x=>low.includes(x));
+    if(w){
+      orb.classList.add('hit');setTimeout(()=>orb.classList.remove('hit'),600);
+      handleCommand(low.split(w).slice(1).join(' ').trim());
+    }
+  };
+  rec.onaudiostart=()=>add('ai','الميكروفون يعمل ✓');
+  rec.onerror=e=>{add('ai','خطأ: '+e.error);if(e.error==='not-allowed'||e.error==='service-not-allowed'){on=false;st.textContent='الميكروفون محظور في هذه الصفحة'}};
+  rec.onend=()=>{if(on)try{rec.start()}catch(_){}};
+  rec.start();on=true;
+  orb.classList.add('on');st.textContent='أستمع... قل: جارفيس';btn.textContent='إيقاف';
+}
+function stop(){on=false;rec&&rec.stop();orb.classList.remove('on');st.textContent='متوقف';btn.textContent='ابدأ الاستماع'}
+btn.onclick=()=>on?stop():start();
+document.getElementById('tst').onclick=()=>{add('ai','جارفيس: مرحباً، هل تسمعني؟');speak('مرحباً، هل تسمعني؟')};
+</script>
+</body>
+</html>
